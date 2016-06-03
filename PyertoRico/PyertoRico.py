@@ -11,7 +11,7 @@ class GameSeries:
     def __init__(self, tableIDs):
         games = []
         for tableID in tableIDs:
-            games.append(Game.__init__(self, tableID))
+            games.append(Game(tableID))
         self.games = games
         
 class PuertoRicoSeries(GameSeries):
@@ -19,7 +19,7 @@ class PuertoRicoSeries(GameSeries):
     def __init__(self, tableIDs):
         games = []
         for tableID in tableIDs:
-            games.append(PuertoRico.__init__(self, tableID))
+            games.append(PuertoRico(tableID))
         self.games = games
         
 class Game:
@@ -217,7 +217,7 @@ class PuertoRico(Game):
         return(overview)
         
     def cumsum(self):        
-        tabs = self.tabulate(self)
+        tabs = self.tabulate()
         cs = {}
         for plyr in set(self.turnorder):
             colSums = [sum(tabs[plyr][col]) for col in tabs[plyr].columns]
@@ -231,7 +231,7 @@ class PuertoRico(Game):
         best_score = max([final[plyr] for plyr in final])
         best_plyr = [plyr for plyr in final if (final[plyr] == best_score)]
         if len(best_plyr) == 1:
-            return(best_plyr)
+            return(str(best_plyr))
         else:
             return(None)
             
