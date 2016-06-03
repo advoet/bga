@@ -14,7 +14,7 @@ class GameSeries:
             games.append(Game(tableID))
         self.games = games
         
-class PuertoRicoSeries(GameSeries):
+class PRSeries(GameSeries):
     
     def __init__(self, tableIDs):
         games = []
@@ -231,7 +231,7 @@ class PuertoRico(Game):
         best_score = max([final[plyr] for plyr in final])
         best_plyr = [plyr for plyr in final if (final[plyr] == best_score)]
         if len(best_plyr) == 1:
-            return(str(best_plyr))
+            return(best_plyr[0])
         else:
             return(None)
             
