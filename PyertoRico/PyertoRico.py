@@ -158,8 +158,8 @@ def tabulate(game):
                 continue 
             
             if "doubloon from the role card" in event:
-                cost = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                overview[doer]["dblns"][i] += cost
+                dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += dblns
             
             # settler phase
             if "got a new plantation" in event:
@@ -191,7 +191,7 @@ def tabulate(game):
                 if "for shipping during the game" not in event:
                     total = int(re.findall("\$[0-9]+\s", event)[0][1:])
                     overview[doer]["vp_ship"][i] += total
-                
+            
             if "victory point from his harbor" in event:
                 total = int(re.findall("\$[0-9]+\s", event)[0][1:])
                 overview[doer]["vp_harbor"][i] += total
@@ -213,6 +213,10 @@ def tabulate(game):
                 overview[doer]["colonists"][i] += 1
             
             # craftsman phase
+            if "doubloon from his factory" in event:
+                dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += dblns              
+            
             if "doubloons from his factory" in event:
                 dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
                 overview[doer]["dblns"][i] += dblns    
@@ -222,7 +226,7 @@ def tabulate(game):
                 dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
                 overview[doer]["dblns"][i] += dblns
             
-            if "from his market" in event:
+            if len(re.findall("from his \w* markets?", event)) > 0:
                 dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
                 overview[doer]["dblns"][i] += dblns
             
