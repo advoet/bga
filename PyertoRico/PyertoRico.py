@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Import dependencies
+import pandas as pd
 import webbrowser
 import requests
 import re
@@ -11,6 +12,8 @@ class Game:
     def __init__(self, tableID):
         self.tableID = tableID
         self.roles = Game.get(tableID)
+        self.turnorder = [role.player_name for role in self.roles]
+        self.roleorder = [role.rol_type for role in self.roles]
         
     # Parse the game into a list of "role blocks"
     def get(tableID):
@@ -73,7 +76,7 @@ class Role:
                 end1 = rolechunk.find(",", start)
                 end2 = rolechunk.find("}", start)
                 end = min(end1, end2)
-            return({ key:rolechunk[start:end] })
+            return({key: rolechunk[start:end]})
         
         # Retrieve important role information
         keys = ("{player_name}", "{rol_type}")
@@ -102,5 +105,139 @@ class Role:
                 logs.append(log_val)
         
         # Return the role summary and role logs
-        role_summary = role_summary + logs
-        return(role_summary)
+        return(role_summary + logs)
+
+def tabulate(game):
+    
+    blds = pd.Series(
+    [int(i) for i in "1" * 6] +
+    [int(i) for i in "2" * 6] +
+    [int(i) for i in "3" * 6] +
+    [int(i) for i in "4" * 5],
+    index =
+    ["small indigo plant", "small sugar mill",
+     "small market", "hacienda", "construction hut",
+     "small warehouse"] +
+    ["indigo plant", "sugar mill", "hospice", "office",
+     "large market", "large warehouse"] +
+    ["tobacco storage", "coffee roaster", "factory",
+     "university", "harbor", "wharf"] +
+    ["guild hall", "customs house", "residence",
+     "city hall", "fortress"]
+     )
+    
+    # Build a template that tabulates the game progress for each player
+    plants_template = pd.DataFrame({
+    "colonists": 0, "vp_ship": 0, "vp_bld": 0, "vp_bonus": 0, "vp_harbor": 0,
+    "dblns": 0, "plant_quarry": 0, "plant_corn": 0, "plant_indigo": 0,
+    "plant_sugar": 0, "plant_tobacco": 0, "plant_coffee": 0, "plant_rand": 0
+    },
+    index = [i for i in range(0, len(game.roles))]
+    )
+    
+    # Build a template that tabulates buildings acquired
+    blds_template = pd.DataFrame(blds).copy().T
+    for i in range(0, len(game.roles)):
+        blds_template.loc[i] = 0
+    
+    # Merge plants_template with blds_template
+    game_template = pd.concat([plants_template, blds_template], axis = 1)
+    
+    # Give each player a game_template
+    overview = {plyr: game_template.copy() for plyr in set(game.turnorder)}
+    
+    for i, role in enumerate(game.roles):
+        
+        # Find how a player benefited from each event in the role
+        for event in role.role:
+            
+            if any([(name in event) for name in set(game.turnorder)]):
+                doer = [name for name in set(game.turnorder)
+                        if ("$"+name in event)][0]
+            else:
+                continue 
+            
+            if "doubloon from the role card" in event:
+                cost = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += cost
+            
+            # settler phase
+            if "got a new plantation" in event:
+                if "got a new plantation from the deck" in event:
+                    overview[doer]["plant_rand"][i] += 1
+                else:
+                    plants = ["corn", "indigo", "sugar", "tobacco", "coffee"]
+                    new = [plt for plt in plants if ("$"+plt) in event][0]
+                    overview[doer]["plant_"+new][i] += 1
+            
+            if "got a new quarry" in event:
+                overview[doer]["plant_quarry"][i] += 1
+            
+            # builder phase
+            if "bought a new building for" in event:
+                new = [bld for bld in blds.index if ("$"+bld in event)][0]
+                cost = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer][new][i] += 1
+                overview[doer]["vp_bld"][i] += blds[new]
+                overview[doer]["dblns"][i] -= cost
+            
+            # captain phase
+            if "victory point for shipping" in event:
+                if "for shipping during the game" not in event:
+                    total = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                    overview[doer]["vp_ship"][i] += total
+            
+            if "victory points for shipping" in event:
+                if "for shipping during the game" not in event:
+                    total = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                    overview[doer]["vp_ship"][i] += total
+                
+            if "victory point from his harbor" in event:
+                total = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["vp_harbor"][i] += total
+            
+            if "victory point as his privilege" in event:
+                total = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["vp_ship"][i] += total
+            
+            # mayor phase
+            if "colonist from the ship" in event:
+                total = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["colonists"][i] += total
+            
+            if "colonists from the ship" in event:
+                total = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["colonists"][i] += total
+            
+            if "colonist from the supply as his privilege" in event:
+                overview[doer]["colonists"][i] += 1
+            
+            # craftsman phase
+            if "doubloons from his factory" in event:
+                dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += dblns    
+            
+            # trader phase
+            if "from the sale" in event:
+                dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += dblns
+            
+            if "from his market" in event:
+                dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += dblns
+            
+            if "doubloon as his privilege" in event:
+                dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += dblns
+            
+            # prospector phase
+            if len(re.findall("doubloon$", event)) > 0:
+                dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["dblns"][i] += dblns
+            
+            # tally bonus points
+            if "bonus points" in event:
+                vp = int(re.findall("\$[0-9]+\s", event)[0][1:])
+                overview[doer]["vp_bonus"][i] += vp
+            
+    return(overview)
