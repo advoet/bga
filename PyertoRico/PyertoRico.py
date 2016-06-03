@@ -6,6 +6,22 @@ import webbrowser
 import requests
 import re
 
+class GameSeries:
+    
+    def __init__(self, tableIDs):
+        games = []
+        for tableID in tableIDs:
+            games.append(Game.__init__(self, tableID))
+        self.games = games
+        
+class PuertoRicoSeries(GameSeries):
+    
+    def __init__(self, tableIDs):
+        games = []
+        for tableID in tableIDs:
+            games.append(PuertoRico.__init__(self, tableID))
+        self.games = games
+        
 class Game:
     
     # Initialize a Game object from the html "logs" of a BGA game
