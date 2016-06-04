@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Import dependencies
+import copy
 import pandas as pd
 import webbrowser
 import requests
@@ -24,7 +25,7 @@ class GameSeries:
         for game in self.games:
             if(len(set(game.turnorder)) is n):
                 games_subset.append(game)
-        series_new = self
+        series_new = copy.copy(self)
         series_new.games = games_subset
         return(series_new)
         
