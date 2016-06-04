@@ -147,6 +147,8 @@ class PuertoRico(Game):
     
     def __init__(self, tableID):
         Game.__init__(self, tableID)
+        self.tabulate = None
+        self.cumsum = None
         
     def tabulate(self):
     
@@ -186,7 +188,7 @@ class PuertoRico(Game):
         game_template = pd.concat([plants_template, blds_template], axis = 1)
         
         # Give each player a game_template
-        overview = {plyr: game_template.copy() for plyr in set(self.turnorder)}
+        rawdata = {plyr: game_template.copy() for plyr in set(self.turnorder)}
     
         for i, role in enumerate(self.roles):
             
@@ -201,108 +203,123 @@ class PuertoRico(Game):
                 
                 if "doubloon from the role card" in event:
                     dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["dblns"][i] += dblns
+                    rawdata[doer]["dblns"][i] += dblns
                 
                 # settler phase
                 if "got a new plantation" in event:
                     if "got a new plantation from the deck" in event:
-                        overview[doer]["plant_rand"][i] += 1
+                        rawdata[doer]["plant_rand"][i] += 1
                     else:
                         plants = ["corn", "indigo", "sugar",
                                   "tobacco", "coffee"]
                         new = [plt for plt in plants if ("$"+plt) in event][0]
-                        overview[doer]["plant_"+new][i] += 1
+                        rawdata[doer]["plant_"+new][i] += 1
                 
                 if "got a new quarry" in event:
-                    overview[doer]["plant_quarry"][i] += 1
+                    rawdata[doer]["plant_quarry"][i] += 1
                 
                 # builder phase
                 if "bought a new building for" in event:
                     new = [bld for bld in blds.index if ("$"+bld in event)][0]
                     cost = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer][new][i] += 1
-                    overview[doer]["vp_bld"][i] += blds[new]
-                    overview[doer]["dblns"][i] -= cost
+                    rawdata[doer][new][i] += 1
+                    rawdata[doer]["vp_bld"][i] += blds[new]
+                    rawdata[doer]["dblns"][i] -= cost
                 
                 # captain phase
                 if "victory point for shipping" in event:
                     if "for shipping during the game" not in event:
                         total = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                        overview[doer]["vp_ship"][i] += total
+                        rawdata[doer]["vp_ship"][i] += total
                 
                 if "victory points for shipping" in event:
                     if "for shipping during the game" not in event:
                         total = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                        overview[doer]["vp_ship"][i] += total
+                        rawdata[doer]["vp_ship"][i] += total
                 
                 if "victory point from his harbor" in event:
                     total = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["vp_harbor"][i] += total
+                    rawdata[doer]["vp_harbor"][i] += total
                 
                 if "victory point as his privilege" in event:
                     total = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["vp_ship"][i] += total
+                    rawdata[doer]["vp_ship"][i] += total
                 
                 # mayor phase
                 if "colonist from the ship" in event:
                     total = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["colonists"][i] += total
+                    rawdata[doer]["colonists"][i] += total
                 
                 if "colonists from the ship" in event:
                     total = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["colonists"][i] += total
+                    rawdata[doer]["colonists"][i] += total
                 
                 if "colonist from the supply as his privilege" in event:
-                    overview[doer]["colonists"][i] += 1
+                    rawdata[doer]["colonists"][i] += 1
                 
                 # craftsman phase
                 if "doubloon from his factory" in event:
                     dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["dblns"][i] += dblns              
+                    rawdata[doer]["dblns"][i] += dblns              
                 
                 if "doubloons from his factory" in event:
                     dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["dblns"][i] += dblns    
+                    rawdata[doer]["dblns"][i] += dblns    
                 
                 # trader phase
                 if "from the sale" in event:
                     dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["dblns"][i] += dblns
+                    rawdata[doer]["dblns"][i] += dblns
                 
                 if len(re.findall("from his \w* markets?", event)) > 0:
                     dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["dblns"][i] += dblns
+                    rawdata[doer]["dblns"][i] += dblns
                 
                 if "doubloon as his privilege" in event:
                     dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["dblns"][i] += dblns
+                    rawdata[doer]["dblns"][i] += dblns
                 
                 # prospector phase
                 if len(re.findall("doubloon$", event)) > 0:
                     dblns = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["dblns"][i] += dblns
+                    rawdata[doer]["dblns"][i] += dblns
                 
                 # tally bonus points
                 if "bonus points" in event:
                     vp = int(re.findall("\$[0-9]+\s", event)[0][1:])
-                    overview[doer]["vp_bonus"][i] += vp
+                    rawdata[doer]["vp_bonus"][i] += vp
                 
-        return(overview)
+        # Update self.tabulate then return rawdata
+        self.tabulate = rawdata
+        return(self.tabulate)
         
-    def cumsum(self):        
-        tabs = self.tabulate()
+    def cumsum(self):
+        
+        if self.tabulate is None:
+            tabs = self.tabulate()
+        else:
+            tabs = self.tabulate
         cs = {}
         for plyr in set(self.turnorder):
             colSums = [sum(tabs[plyr][col]) for col in tabs[plyr].columns]
             cs.update({plyr: pd.Series(colSums, index = tabs[plyr].columns)})
-        return(pd.DataFrame(cs))
+            
+        # Update self.cumsum then return cumsum
+        self.cumsum = pd.DataFrame(cs)
+        return(self.cumsum)
         
     def winner(self):
-        cs = self.cumsum()
+        
+        if self.cumsum is None:
+            cs = self.cumsum()
+        else:
+            cs = self.cumsum
         vps = ["vp_ship", "vp_bld", "vp_bonus", "vp_harbor"]
         final = {plyr: sum(cs[plyr][vps]) for plyr in set(self.turnorder)}
         best_score = max([final[plyr] for plyr in final])
         best_plyr = [plyr for plyr in final if (final[plyr] == best_score)]
+        
+        # Return name of best player
         if len(best_plyr) == 1:
             return(best_plyr[0])
         else:
