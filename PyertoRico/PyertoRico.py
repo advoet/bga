@@ -152,6 +152,8 @@ class PRSeries(GameSeries):
             
             # Calculate the game winner
             winner = game.winner()
+            if winner is None:
+                continue
             
             # Temporarily set "tabulate_val" as part of a full game
             if t is not None and t < len(game.turnorder):
@@ -184,7 +186,7 @@ class PRSeries(GameSeries):
         return({"winners": mean_winner,
                 "losers": mean_loser})
                 
-    # Calculate frequency that winner held all pieces by turn "t"
+    # Calculate frequency that winner held each piece by turn "t"
     def winnerHeldAll(self, t = None):
         
         items = self.games[0].cumsum_val.index
