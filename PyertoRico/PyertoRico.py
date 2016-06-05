@@ -2,6 +2,7 @@
 
 # Import dependencies
 import copy
+import numpy as np
 import pandas as pd
 import webbrowser
 import requests
@@ -135,21 +136,92 @@ class Role:
 
 class PRSeries(GameSeries):
     
+    # Initialize a PRSeries object by importing multiple Game objects
     def __init__(self, tableIDs):
         games = []
         for tableID in tableIDs:
             games.append(PuertoRico(tableID))
         self.games = games
         
+    # Calculate frequency that winner held piece "item" by turn "t"
+    def winnerHeld(self, item, t = None):
+        
+        board_winner = []
+        board_loser = []
+        for game in self.games:
+            
+            # Calculate the game winner
+            winner = game.winner()
+            
+            # Temporarily set "tabulate_val" as part of a full game
+            if t is not None and t < len(game.turnorder):
+                tabulate_val_backup = game.tabulate_val
+                cumsum_val_backup = game.cumsum_val
+                game.tabulate_val = {plyr: game.tabulate_val[plyr][0:t] for
+                                        plyr in game.tabulate_val}
+                game.cumsum_val = None
+                
+            # Calculate the cumsum up to turn "t" using "tabulate_val"
+            if game.cumsum_val is None:
+                tboard = game.cumsum()
+            else:
+                tboard = game.cumsum_val
+                
+            # Store the winner's and loser's time-stamped boards
+            if winner is not None:
+                board_winner.append(tboard[winner][item])
+                board_loser.append([tboard[plyr][item] for plyr in
+                                    set(game.turnorder) if (plyr != winner)])
+                                    
+            # Return "tabulate_val" to full game values
+            if t is not None and t < len(game.turnorder):
+                game.tabulate_val = tabulate_val_backup
+                game.cumsum_val = cumsum_val_backup
+                
+        # Average data for the time-stamped boards
+        mean_winner = np.mean(board_winner)
+        mean_loser = np.mean([np.mean(i) for i in board_loser])
+        return({"winners": mean_winner,
+                "losers": mean_loser})
+                
+    # Calculate frequency that winner held all pieces by turn "t"
+    def winnerHeldAll(self, t = None):
+        
+        items = self.games[0].cumsum_val.index
+        output = []
+        for item in items:
+            output.append(self.winnerHeld(item, t))
+            
+        all_winner = [entry["winners"] for entry in output]
+        all_loser = [entry["losers"] for entry in output]
+        final = pd.DataFrame({"winner": all_winner, "loser": all_loser},
+                              index = items)
+        return(final)
+        
+    # Calculate frequency that winner held a piece at each turn
+    def winnerHeldT(self, item):
+        
+        game_max = max([len(game.turnorder) for game in self.games])
+        output = []
+        for t in range(0, game_max):
+            output.append(self.winnerHeld(item, t))
+            
+        all_winner = [entry["winners"] for entry in output]
+        all_loser = [entry["losers"] for entry in output]
+        final = pd.DataFrame({"winner": all_winner, "loser": all_loser},
+                              index = range(0, game_max))
+        return(final)
+        
 # Define PuertoRico as a sub-class of Game
 # While the Game object includes methods general to (all of?) BGA,
 #  this object includes methods specific to Puerto Rico.
 class PuertoRico(Game):
     
+    tabulate_val = None
+    cumsum_val = None
+    
     def __init__(self, tableID):
         Game.__init__(self, tableID)
-        self.tabulate = None
-        self.cumsum = None
         
     def tabulate(self):
     
@@ -291,30 +363,30 @@ class PuertoRico(Game):
                     rawdata[doer]["vp_bonus"][i] += vp
                 
         # Update self.tabulate then return rawdata
-        self.tabulate = rawdata
-        return(self.tabulate)
+        self.tabulate_val = rawdata
+        return(self.tabulate_val)
         
     def cumsum(self):
         
-        if self.tabulate is None:
+        if self.tabulate_val is None:
             tabs = self.tabulate()
         else:
-            tabs = self.tabulate
+            tabs = self.tabulate_val
         cs = {}
         for plyr in set(self.turnorder):
             colSums = [sum(tabs[plyr][col]) for col in tabs[plyr].columns]
             cs.update({plyr: pd.Series(colSums, index = tabs[plyr].columns)})
             
         # Update self.cumsum then return cumsum
-        self.cumsum = pd.DataFrame(cs)
-        return(self.cumsum)
+        self.cumsum_val = pd.DataFrame(cs)
+        return(self.cumsum_val)
         
     def winner(self):
         
-        if self.cumsum is None:
+        if self.cumsum_val is None:
             cs = self.cumsum()
         else:
-            cs = self.cumsum
+            cs = self.cumsum_val
         vps = ["vp_ship", "vp_bld", "vp_bonus", "vp_harbor"]
         final = {plyr: sum(cs[plyr][vps]) for plyr in set(self.turnorder)}
         best_score = max([final[plyr] for plyr in final])
