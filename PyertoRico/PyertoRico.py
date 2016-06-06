@@ -215,6 +215,27 @@ class PRSeries(GameSeries):
                               index = range(0, game_max))
         return(final)
         
+    # Compare the average winning and losing boards at every turn
+    def winnerHeldAllT(self):
+        
+        # Calculate per-turn averages for each item
+        items = self.games[0].cumsum_val.index
+        output = []
+        for item in items:
+            print("Debug: " + item)
+            output.append(self.winnerHeldT(item))
+            
+        # Compile per-turn averages for each item
+        held_winner = []
+        held_loser = []
+        for i, item in enumerate(items):
+            held_winner.append(pd.Series(output[i]["winner"]))
+            held_loser.append(pd.Series(output[i]["loser"]))
+        df_winner = pd.DataFrame(held_winner, index = items).T
+        df_loser = pd.DataFrame(held_loser, index = items).T
+        return({"winners": df_winner,
+                "losers": df_loser})
+                
     # Tally the number of times each winner chose each role
     def winnerRoles(self):
         
