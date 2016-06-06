@@ -215,7 +215,7 @@ class PRSeries(GameSeries):
                               index = range(0, game_max))
         return(final)
         
-    # Calculate frequency that winner chose each role
+    # Tally the number of times each winner chose each role
     def winnerRoles(self):
         
         roles_winner = []
