@@ -2,6 +2,7 @@
 
 # Import dependencies
 import copy
+import collections
 import numpy as np
 import pandas as pd
 import webbrowser
@@ -214,6 +215,41 @@ class PRSeries(GameSeries):
                               index = range(0, game_max))
         return(final)
         
+    # Calculate frequency that winner chose each role
+    def winnerRoles(self):
+        
+        roles_winner = []
+        roles_loser = []
+        for game in self.games:
+            
+            # Calculate the game winner
+            winner = game.winner()
+            if winner is None:
+                continue
+            
+            # Find which roles the winner selected in this game
+            index_winner = [plyr == winner for plyr in game.turnorder]
+            role_winner = [game.roleorder[j] for j, bln in
+                enumerate(index_winner) if bln]
+                
+            # Find which roles the loser selected in this game
+            index_loser = [plyr != winner for plyr in game.turnorder]
+            role_loser = [game.roleorder[j] for j, bln in
+                enumerate(index_loser) if bln]
+                
+            # Tally the roles chosen in each game (weighted)
+            roles_winner.append(pd.Series(collections.Counter(role_winner)))
+            series_loser = pd.Series(collections.Counter(role_loser))
+            series_loser = series_loser.div(len(set(game.turnorder)) - 1)
+            roles_loser.append(series_loser)
+            
+        # Replace NaN with zeros and return result
+        roledf_winner = pd.DataFrame(roles_winner)
+        roledf_winner[pd.isnull(roledf_winner)] = 0
+        roledf_loser = pd.DataFrame(roles_loser)
+        return({"winners": roledf_winner,
+                "losers": roledf_loser})
+                
 # Define PuertoRico as a sub-class of Game
 # While the Game object includes methods general to (all of?) BGA,
 #  this object includes methods specific to Puerto Rico.
