@@ -236,11 +236,11 @@ class PRSeries(GameSeries):
         return({"winners": df_winner,
                 "losers": df_loser})
                 
-    # Tally the number of times each winner chose each role
-    def winnerRoles(self):
+    # Tally the number of times each winner chose each item
+    def winnerCumsums(self):
         
-        roles_winner = []
-        roles_loser = []
+        items_winner = []
+        items_loser = []
         for game in self.games:
             
             # Calculate the game winner
@@ -248,28 +248,14 @@ class PRSeries(GameSeries):
             if winner is None:
                 continue
             
-            # Find which roles the winner selected in this game
-            index_winner = [plyr == winner for plyr in game.turnorder]
-            role_winner = [game.roleorder[j] for j, bln in
-                enumerate(index_winner) if bln]
+            # "cumsum_val" exists because winner() method called
+            items_winner.append(game.cumsum_val[winner])
+            for plyr in [lsr for lsr in set(game.turnorder) if lsr != winner]:
+                items_loser.append(game.cumsum_val[plyr])
                 
-            # Find which roles the loser selected in this game
-            index_loser = [plyr != winner for plyr in game.turnorder]
-            role_loser = [game.roleorder[j] for j, bln in
-                enumerate(index_loser) if bln]
-                
-            # Tally the roles chosen in each game (weighted)
-            roles_winner.append(pd.Series(collections.Counter(role_winner)))
-            series_loser = pd.Series(collections.Counter(role_loser))
-            series_loser = series_loser.div(len(set(game.turnorder)) - 1)
-            roles_loser.append(series_loser)
-            
-        # Replace NaN with zeros and return result
-        roledf_winner = pd.DataFrame(roles_winner)
-        roledf_winner[pd.isnull(roledf_winner)] = 0
-        roledf_loser = pd.DataFrame(roles_loser)
-        return({"winners": roledf_winner,
-                "losers": roledf_loser})
+        # Return cumsum data for winning and losing players
+        return({"winners": pd.DataFrame(items_winner),
+                "losers": pd.DataFrame(items_loser)})
                 
 # Define PuertoRico as a sub-class of Game
 # While the Game object includes methods general to (all of?) BGA,
@@ -303,10 +289,13 @@ class PuertoRico(Game):
         
         # Build a template that tabulates the game progress for each player
         plants_template = pd.DataFrame({
-        "vp_ship": 0, "vp_bld": 0, "vp_bonus": 0, "vp_harbor": 0,
-        "colonists": 0, "dblns": 0, "plant_quarry": 0, "plant_corn": 0,
-        "plant_indigo": 0, "plant_sugar": 0, "plant_tobacco": 0,
-        "plant_coffee": 0, "plant_rand": 0
+        "builder": 0, "mayor": 0, "captain": 0, "craftsman": 0,
+        "trader": 0, "settler": 0, "prospector": 0,
+        "vp_bld": 0, "vp_bonus": 0, "vp_harbor": 0, "vp_ship": 0,
+        "colonists": 0, "dblns": 0,
+        "plant_corn": 0, "plant_indigo": 0, "plant_sugar": 0,
+        "plant_tobacco": 0, "plant_coffee": 0,
+        "plant_quarry": 0, "plant_rand": 0
         },
         index = [i for i in range(0, len(self.roles))]
         )
@@ -321,8 +310,11 @@ class PuertoRico(Game):
         
         # Give each player a game_template
         rawdata = {plyr: game_template.copy() for plyr in set(self.turnorder)}
-    
+        
         for i, role in enumerate(self.roles):
+            
+            # Tally the role choice for the respective role chooser
+            rawdata[self.turnorder[i]][self.roleorder[i]] += 1
             
             # Find how a player benefited from each event in the role
             for event in role.role:
