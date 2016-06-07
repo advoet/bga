@@ -268,7 +268,7 @@ class PuertoRico(Game):
         Game.__init__(self, tableID)
         
     def tabulate(self):
-    
+        
         blds = pd.Series(
         [int(i) for i in "1" * 6] +
         [int(i) for i in "2" * 6] +
@@ -287,7 +287,7 @@ class PuertoRico(Game):
          )
         
         # Build a template that tabulates the game progress for each player
-        plants_template = pd.DataFrame({
+        etc_template = pd.DataFrame({
         "builder": 0, "mayor": 0, "captain": 0, "craftsman": 0,
         "trader": 0, "settler": 0, "prospector": 0,
         "vp_bld": 0, "vp_bonus": 0, "vp_harbor": 0, "vp_ship": 0,
@@ -304,8 +304,8 @@ class PuertoRico(Game):
         for i in range(0, len(self.roles)):
             blds_template.loc[i] = 0
         
-        # Merge plants_template with blds_template
-        game_template = pd.concat([plants_template, blds_template], axis = 1)
+        # Merge etc_template with blds_template
+        game_template = pd.concat([etc_template, blds_template], axis = 1)
         
         # Give each player a game_template
         rawdata = {plyr: game_template.copy() for plyr in set(self.turnorder)}
@@ -313,7 +313,7 @@ class PuertoRico(Game):
         for i, role in enumerate(self.roles):
             
             # Tally the role choice for the respective role chooser
-            rawdata[self.turnorder[i]][self.roleorder[i]] += 1
+            rawdata[self.turnorder[i]][self.roleorder[i]][i] += 1
             
             # Find how a player benefited from each event in the role
             for event in role.role:
