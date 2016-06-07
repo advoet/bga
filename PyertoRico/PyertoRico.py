@@ -196,7 +196,7 @@ class PRSeries(GameSeries):
             
         all_winner = [entry["winners"] for entry in output]
         all_loser = [entry["losers"] for entry in output]
-        final = pd.DataFrame({"winner": all_winner, "loser": all_loser},
+        final = pd.DataFrame({"winners": all_winner, "losers": all_loser},
                               index = items)
         return(final)
         
@@ -210,7 +210,7 @@ class PRSeries(GameSeries):
             
         all_winner = [entry["winners"] for entry in output]
         all_loser = [entry["losers"] for entry in output]
-        final = pd.DataFrame({"winner": all_winner, "loser": all_loser},
+        final = pd.DataFrame({"winners": all_winner, "losers": all_loser},
                               index = range(0, game_max))
         return(final)
         
@@ -221,15 +221,15 @@ class PRSeries(GameSeries):
         items = self.games[0].cumsum_val.index
         output = []
         for item in items:
-            print("Debug: " + item)
+            print("Calculating per-turn averages for item: " + item)
             output.append(self.winnerHeldT(item))
             
         # Compile per-turn averages for each item
         held_winner = []
         held_loser = []
         for i, item in enumerate(items):
-            held_winner.append(pd.Series(output[i]["winner"]))
-            held_loser.append(pd.Series(output[i]["loser"]))
+            held_winner.append(pd.Series(output[i]["winners"]))
+            held_loser.append(pd.Series(output[i]["losers"]))
         df_winner = pd.DataFrame(held_winner, index = items).T
         df_loser = pd.DataFrame(held_loser, index = items).T
         return({"winners": df_winner,
