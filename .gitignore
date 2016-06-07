@@ -1,5 +1,5 @@
 bga.Rproj
-README.Rmd
+py/__pycache__/*
 .Rproj.user
 .Rhistory
 .RData
