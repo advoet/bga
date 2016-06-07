@@ -4,7 +4,6 @@
 import copy
 import numpy as np
 import pandas as pd
-import webbrowser
 import requests
 import re
 
@@ -14,10 +13,10 @@ import re
 class GameSeries:
     
     # Initialize a list of Game objects from a list of table IDs
-    def __init__(self, tableIDs):
+    def __init__(self, tableIDs, email, password):
         games = []
         for tableID in tableIDs:
-            games.append(Game(tableID))
+            games.append(Game(tableID, email, password))
         self.games = games
         
     # Filter GameSeries to include only games with n players
@@ -33,26 +32,43 @@ class GameSeries:
 class Game:
     
     # Initialize a Game object from the html "logs" of a BGA game
-    def __init__(self, tableID):
-        self.tableID = tableID
-        self.roles = Game.get(tableID)
+    def __init__(self, tableID, email, password):
+        self.tableID = str(tableID)
+        self.roles = Game.get(tableID, email, password)
         self.turnorder = [role.player_name for role in self.roles]
         self.roleorder = [role.rol_type for role in self.roles]
         
     # Parse the game into a list of "role blocks"
-    def get(tableID):
+    def get(tableID, email, password):
         
-        # Open webpage with browser to instance a game "log"
-        # User must log into Board Game Arena on browser
-        html = "http://en.boardgamearena.com/gamereview" + "?table=" + tableID
-        webbrowser.open(html, autoraise = False)
+        tableID = str(tableID)
         
-        # Get the html "log" for a single game
-        target_url = "http://en.boardgamearena.com/archive/archive/logs.html"
-        params = {"table": str(tableID), "translated": "true"}
-        req = requests.get(target_url, params = params)
-        log = req.text
+        # Define parameters to access to Board Game Arena
+        url_login = "http://en.boardgamearena.com/account/account/login.html"
+        prm_login = {'email': email, 'password': password, 'rememberme': 'on',
+                     'redirect': 'join', 'form_id': 'loginform'}
+        url_game = "http://en.boardgamearena.com/gamereview?table=" + tableID
+        url_log = "http://en.boardgamearena.com/archive/archive/logs.html"
+        prm_log = {"table": tableID, "translated": "true"}
         
+        with requests.session() as c:
+            
+            # Login to Board Game Arena
+            r = c.post(url_login, params = prm_login)
+            if r.status_code != 200:
+                print("Error trying to login!")
+            
+            # Generate the log files
+            r = c.get(url_game)
+            if r.status_code != 200:
+                print("Error trying to load the gamereview page!")
+            
+            # Retrieve the log files
+            r = c.get(url_log, params = prm_log)
+            if r.status_code != 200:
+                print("Error trying to load the log file!")
+            log = r.text
+            
         # Index all role changes
         index_role = []
         loc = 0
@@ -137,10 +153,10 @@ class Role:
 class PRSeries(GameSeries):
     
     # Initialize a PRSeries object by importing multiple Game objects
-    def __init__(self, tableIDs):
+    def __init__(self, tableIDs, email, password):
         games = []
         for tableID in tableIDs:
-            games.append(PuertoRico(tableID))
+            games.append(PuertoRico(tableID, email, password))
         self.games = games
         
     # Calculate frequency that winner held piece "item" by turn "t"
@@ -221,7 +237,7 @@ class PRSeries(GameSeries):
         items = self.games[0].cumsum_val.index
         output = []
         for item in items:
-            print("Calculating per-turn averages for item: " + item)
+            print("Calculating per-turn average for item: " + item)
             output.append(self.winnerHeldT(item))
             
         # Compile per-turn averages for each item
@@ -264,8 +280,8 @@ class PuertoRico(Game):
     tabulate_val = None
     cumsum_val = None
     
-    def __init__(self, tableID):
-        Game.__init__(self, tableID)
+    def __init__(self, tableID, email, password):
+        Game.__init__(self, tableID, email, password)
         
     def tabulate(self):
         
