@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import requests
 import re
+import time
 
 ###########################################################
 ### Define generic classes for Board Game Arena data
@@ -15,8 +16,10 @@ class GameSeries:
     # Initialize a list of Game objects from a list of table IDs
     def __init__(self, tableIDs, email, password):
         games = []
-        for tableID in tableIDs:
+        for i, tableID in enumerate(tableIDs):
+            print("(" + str(i) + "): Fetching tableID " + str(tableID))
             games.append(Game(tableID, email, password))
+            time.sleep(30)
         self.games = games
         
     # Filter GameSeries to include only games with n players
