@@ -159,8 +159,8 @@ class PRSeries(GameSeries):
             games.append(PuertoRico(tableID, email, password))
         self.games = games
         
-    # Calculate frequency that winner held piece "item" by turn "t"
-    def winnerHeld(self, item, t = None):
+    # Tally the number of times each winner chose each item in a turn range
+    def winnerCumsums(self, start = 0, end = None):
         
         board_winner = []
         board_loser = []
@@ -172,43 +172,57 @@ class PRSeries(GameSeries):
                 continue
             
             # Temporarily set "tabulate_val" as part of a full game
-            if t is not None and t < len(game.turnorder):
+            if end is not None and end < len(game.turnorder):
                 tabulate_val_backup = game.tabulate_val
                 cumsum_val_backup = game.cumsum_val
-                game.tabulate_val = {plyr: game.tabulate_val[plyr][0:t] for
-                                        plyr in game.tabulate_val}
+                game.tabulate_val = {plyr: game.tabulate_val[plyr][start:end]
+                                        for plyr in game.tabulate_val}
                 game.cumsum_val = None
                 
-            # Calculate the cumsum up to turn "t" using "tabulate_val"
+            # Calculate the cumsum for turn range using "tabulate_val"
             if game.cumsum_val is None:
                 tboard = game.cumsum()
             else:
                 tboard = game.cumsum_val
                 
-            # Store the winner's and loser's time-stamped boards
             if winner is not None:
-                board_winner.append(tboard[winner][item])
-                board_loser.append([tboard[plyr][item] for plyr in
-                                    set(game.turnorder) if (plyr != winner)])
+                board_winner.append(tboard[winner])
+                lsrs = [lsr for lsr in set(game.turnorder) if lsr != winner]
+                for plyr in lsrs:
+                    board_loser.append(tboard[plyr])
                                     
             # Return "tabulate_val" to full game values
-            if t is not None and t < len(game.turnorder):
+            if end is not None and end < len(game.turnorder):
                 game.tabulate_val = tabulate_val_backup
                 game.cumsum_val = cumsum_val_backup
                 
+        # Return cumsum data for winning and losing players
+        return({"winners": pd.DataFrame(board_winner),
+                "losers": pd.DataFrame(board_loser)})
+                
+    # Calculate frequency that winner held piece "item" in a turn range
+    def winnerHeld(self, item, start = 0, end = None):
+        
+        # Retrieve game cumsums between a range of turns
+        boards = self.winnerCumsums(start = start, end = end)
+        
         # Average data for the time-stamped boards
-        mean_winner = np.mean(board_winner)
-        mean_loser = np.mean([np.mean(i) for i in board_loser])
+        mean_winner = np.mean(boards["winners"][item])
+        mean_loser = np.mean(boards["losers"][item])
         return({"winners": mean_winner,
                 "losers": mean_loser})
                 
-    # Calculate frequency that winner held each piece by turn "t"
-    def winnerHeldAll(self, t = None):
+    # Calculate frequency that winner held each piece in a turn range
+    def winnerHeldAll(self, start = 0, end = None):
+        
+        # Retrieve game cumsums between a range of turns
+        boards = self.winnerCumsums(start = start, end = end)
         
         items = self.games[0].cumsum_val.index
         output = []
         for item in items:
-            output.append(self.winnerHeld(item, t))
+            output.append({"winners": np.mean(boards["winners"][item]),
+                           "losers": np.mean(boards["losers"][item])})
             
         all_winner = [entry["winners"] for entry in output]
         all_loser = [entry["losers"] for entry in output]
@@ -222,7 +236,7 @@ class PRSeries(GameSeries):
         game_max = max([len(game.turnorder) for game in self.games])
         output = []
         for t in range(0, game_max):
-            output.append(self.winnerHeld(item, t))
+            output.append(self.winnerHeld(item, start = 0, end = t))
             
         all_winner = [entry["winners"] for entry in output]
         all_loser = [entry["losers"] for entry in output]
@@ -250,27 +264,6 @@ class PRSeries(GameSeries):
         df_loser = pd.DataFrame(held_loser, index = items).T
         return({"winners": df_winner,
                 "losers": df_loser})
-                
-    # Tally the number of times each winner chose each item
-    def winnerCumsums(self):
-        
-        items_winner = []
-        items_loser = []
-        for game in self.games:
-            
-            # Calculate the game winner
-            winner = game.winner()
-            if winner is None:
-                continue
-            
-            # "cumsum_val" exists because winner() method called
-            items_winner.append(game.cumsum_val[winner])
-            for plyr in [lsr for lsr in set(game.turnorder) if lsr != winner]:
-                items_loser.append(game.cumsum_val[plyr])
-                
-        # Return cumsum data for winning and losing players
-        return({"winners": pd.DataFrame(items_winner),
-                "losers": pd.DataFrame(items_loser)})
                 
 # Define PuertoRico as a sub-class of Game
 # While the Game object includes methods general to (all of?) BGA,
