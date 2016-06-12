@@ -37,12 +37,12 @@ class Game:
     # Initialize a Game object from the html "logs" of a BGA game
     def __init__(self, tableID, email, password):
         self.tableID = str(tableID)
-        self.roles = Game.get(tableID, email, password)
+        self.get(tableID, email, password)
         self.turnorder = [role.player_name for role in self.roles]
         self.roleorder = [role.rol_type for role in self.roles]
         
     # Parse the game into a list of "role blocks"
-    def get(tableID, email, password):
+    def get(self, tableID, email, password):
         
         tableID = str(tableID)
         
@@ -72,6 +72,9 @@ class Game:
                 print("Error trying to load the log file!")
             log = r.text
             
+        # Save the requested log file
+        self.request = log
+            
         # Index all role changes
         index_role = []
         loc = 0
@@ -91,8 +94,8 @@ class Game:
             role_new = Role(log[start:end])
             roles.append(role_new)
         
-        # Return a list of Role objects
-        return(roles)
+        # Save the partitioned roles
+        self.roles = roles
         
 class Role:
     
