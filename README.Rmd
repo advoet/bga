@@ -25,7 +25,7 @@ Specific sub-classes -- e.g., `PuertoRico` (a sub-class of `Game`) and `PRSeries
 In any case, the user can import data directly from *Board Game Arena* using a class constructor along with one or more unique table IDs. In the example below, we import a series of *Puerto Rico* games played between myself and two other players.
 
 ```{python, eval = FALSE}
-tableIDs = [21730862, 21036898, 21036338, 20903484, 20660296, 20213069, 19738486, 19724472, 19723851, 16955542, 16436026, 16022813, 15536267, 15235297, 15175563, 15035343, 14867830, 14751556, 14683728, 14326319, 14201770, 14201333, 14146399, 13181088, 12467056, 12001908, 8906427, 8906030]
+tableIDs = [21730862, 21036898, 21036338, 20903484, 20660296, 20213069]
 series = bga.PRSeries(tableIDs, your_email, your_password)
 ```
 
