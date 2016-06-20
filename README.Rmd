@@ -16,7 +16,7 @@ This module provides object classes and methods to facilitate access to board ga
 import bga
 ```
 
-## Class structure
+### Class structure
 
 This module contains three principal classes which serve to organize the board game data. A `GameSeries` object contains a list of `Game` objects which each contains a list of `Role` objects. These `Role` objects contain all events that occurred during a complete turn. Ultimately, the extent and type of information stored within a single `Role` object depends on how *Board Game Arena* defines the `Role` bounds within their cached log files.
 
@@ -29,7 +29,7 @@ tableIDs = [21730862, 21036898, 21036338, 20903484, 20660296, 20213069]
 series = bga.PRSeries(tableIDs, your_email, your_password)
 ```
 
-## Puerto Rico
+### Puerto Rico
 
 At the time of writing, the `PRSeries` sub-class includes two kinds of methods to aid in analyzing *Puerto Rico* game data. The first method tabulates the average board game setup held by the winning and losing players between turns `start` and `end`. In the example below, we calculate the average frequency of ownership for the "Factory" game piece by the winning and losing players. Note that by excluding the arguments `start` and `end`, we perform these averages using the endgame board.
 
